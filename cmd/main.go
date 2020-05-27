@@ -2,24 +2,26 @@ package main
 
 import (
 	"flag"
-	"github.com/golang/glog"
-	"github.com/mittwald/kubernetes-loadwatcher/pkg/config"
-	"github.com/mittwald/kubernetes-loadwatcher/pkg/loadwatcher"
-	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/rest"
-	"k8s.io/client-go/tools/clientcmd"
 	"os"
 	"os/signal"
 	"syscall"
+
+	"github.com/golang/glog"
+	"github.com/rtreffer/kubernetes-pressurecooker/pkg/config"
+	"github.com/rtreffer/kubernetes-pressurecooker/pkg/pressurecooker"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/clientcmd"
 )
 
 func main() {
 	var f config.StartupFlags
 
 	flag.StringVar(&f.KubeConfig, "kubeconfig", "", "file path to kubeconfig")
-	flag.IntVar(&f.TaintThreshold, "taint-threshold", 0, "load threshold value (set to 0 for automatic detection)")
-	flag.IntVar(&f.EvictThreshold, "evict-threshold", 0, "load threshold value (set to 0 for automatic detection)")
+	flag.Float64Var(&f.TaintThreshold, "taint-threshold", 25, "pressure threshold value")
+	flag.Float64Var(&f.EvictThreshold, "evict-threshold", 50, "pressure threshold value")
 	flag.StringVar(&f.EvictBackoff, "evict-backoff", "10m", "time to wait between evicting Pods")
+	flag.StringVar(&f.MinPodAge, "min-pod-age", "5m", "time to wait between evicting Pods")
 	flag.StringVar(&f.NodeName, "node-name", "", "current node name")
 	flag.Parse()
 
@@ -33,17 +35,17 @@ func main() {
 		panic(err)
 	}
 
-	w, err := loadwatcher.NewWatcher(f.TaintThreshold)
+	w, err := pressurecooker.NewWatcher(f.TaintThreshold)
 	if err != nil {
 		panic(err)
 	}
 
-	t, err := loadwatcher.NewTainter(c, f.NodeName)
+	t, err := pressurecooker.NewTainter(c, f.NodeName)
 	if err != nil {
 		panic(err)
 	}
 
-	e, err := loadwatcher.NewEvicter(c, f.EvictThreshold, f.NodeName, f.EvictBackoff)
+	e, err := pressurecooker.NewEvicter(c, f.EvictThreshold, f.NodeName, f.EvictBackoff, f.MinPodAge)
 	if err != nil {
 		panic(err)
 	}
@@ -77,7 +79,7 @@ func main() {
 				return
 			}
 
-			glog.Infof("load5 exceeded threshold, load5=%f load15=%f", evt.Load5, evt.Load15)
+			glog.Infof("5 minute pressure average exceeded threshold, avg300=%f", evt.Avg300)
 
 			if err := t.TaintNode(evt); err != nil {
 				glog.Errorf("error while tainting node: %s", err.Error())
@@ -92,7 +94,7 @@ func main() {
 				return
 			}
 
-			glog.Infof("load15 deceeded threshold, load5=%f load15=%f", evt.Load5, evt.Load15)
+			glog.Infof("pressure deceeded threshold, avg300=%f avg60=%f avg10=%f", evt.Avg300, evt.Avg60, evt.Avg10)
 
 			if err := t.UntaintNode(evt); err != nil {
 				glog.Errorf("error while removing taint from node: %s", err.Error())

@@ -1,14 +1,15 @@
-package loadwatcher
+package pressurecooker
 
 import (
+	"time"
+
 	"github.com/golang/glog"
-	"k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/scheme"
 	typedv1 "k8s.io/client-go/kubernetes/typed/core/v1"
 	"k8s.io/client-go/tools/record"
-	"time"
 )
 
 type Evicter struct {
@@ -17,21 +18,22 @@ type Evicter struct {
 	nodeName     string
 	nodeRef      *v1.ObjectReference
 	recorder     record.EventRecorder
+	minPodAge    time.Duration
 	backoff      time.Duration
 	lastEviction time.Time
 }
 
-func NewEvicter(client kubernetes.Interface, threshold int, nodeName string, backoff string) (*Evicter, error) {
+func NewEvicter(client kubernetes.Interface, threshold float64, nodeName string, backoff string, minPodAge string) (*Evicter, error) {
 	if threshold == 0 {
-		cpuCount, err := determineCPUCount()
-		if err != nil {
-			return nil, err
-		}
-
-		threshold = int(cpuCount) * 4
+		threshold = 50
 	}
 
 	backoffDuration, err := time.ParseDuration(backoff)
+	if err != nil {
+		return nil, err
+	}
+
+	minPodAgeDuration, err := time.ParseDuration(minPodAge)
 	if err != nil {
 		return nil, err
 	}
@@ -53,10 +55,11 @@ func NewEvicter(client kubernetes.Interface, threshold int, nodeName string, bac
 
 	return &Evicter{
 		client:    client,
-		threshold: float64(threshold),
+		threshold: threshold,
 		nodeName:  nodeName,
 		nodeRef:   nodeRef,
 		recorder:  r,
 		backoff:   backoffDuration,
+		minPodAge: minPodAgeDuration,
 	}, nil
 }

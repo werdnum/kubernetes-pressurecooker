@@ -1,4 +1,4 @@
-package loadwatcher
+package pressurecooker
 
 import (
 	"github.com/golang/glog"
@@ -10,9 +10,9 @@ import (
 	"k8s.io/client-go/tools/record"
 )
 
-const ComponentName = "loadwatcher"
+const ComponentName = "pressurecooker"
 
-const TaintKey = "loadwatcher.mittwald.systems/load-exceeded"
+const TaintKey = "pressurecooker/load-exceeded"
 
 type Tainter struct {
 	client   kubernetes.Interface

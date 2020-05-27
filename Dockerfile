@@ -1,16 +1,17 @@
-FROM golang:1.12 AS builder
+FROM golang:1.14 AS builder
 
 COPY . /work
 WORKDIR /work
-RUN useradd loadwatcher
+RUN useradd pressurecooker
+RUN cd /work ; go build -o kubernetes-pressurecooker cmd/main.go
 
 FROM scratch
 
-LABEL MAINTAINER="Martin Helmich <m.helmich@mittwald.de>"
-COPY kubernetes-loadwatcher /usr/sbin/kubernetes-loadwatcher
+LABEL MAINTAINER="Rene Treffer <treffer+github@measite.de>"
+COPY --from=builder /work/kubernetes-pressurecooker /usr/bin/kubernetes-pressurecooker
 COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 COPY --from=builder /etc/passwd /etc/
 
-USER loadwatcher
+USER pressurecooker
 
-ENTRYPOINT ["/usr/sbin/kubernetes-loadwatcher", "-logtostderr"]
+ENTRYPOINT ["/usr/bin/kubernetes-pressurecooker", "-logtostderr"]

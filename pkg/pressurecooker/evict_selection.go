@@ -1,9 +1,12 @@
-package loadwatcher
+package pressurecooker
 
 import (
-	"github.com/golang/glog"
-	"k8s.io/api/core/v1"
+	"math"
 	"sort"
+	"time"
+
+	"github.com/golang/glog"
+	v1 "k8s.io/api/core/v1"
 )
 
 type PodCandidateSet []PodCandidate
@@ -44,10 +47,30 @@ func (s PodCandidateSet) scoreByQOSClass() {
 	for i := range s {
 		switch s[i].Pod.Status.QOSClass {
 		case v1.PodQOSBestEffort:
-			s[i].Score += 200
+			s[i].Score += 100
 		case v1.PodQOSBurstable:
 			s[i].Score += 100
 		}
+	}
+}
+
+func (s PodCandidateSet) scoreByAge(minPodAge time.Duration) {
+	now := time.Now()
+	for i, pod := range s {
+		if pod.Pod.Status.StartTime == nil {
+			s[i].Score -= 10000
+			continue
+		}
+		delta := now.Sub(pod.Pod.Status.StartTime.Time)
+		if delta < minPodAge {
+			s[i].Score -= 10000
+			continue
+		}
+		age := int64(delta / time.Second)
+		if age < 1 {
+			age = 1
+		}
+		s[i].Score += int(math.Floor(math.Log1p(float64(age))))
 	}
 }
 
@@ -65,9 +88,9 @@ func (s PodCandidateSet) scoreByOwnerType() {
 			case "ReplicaSet":
 				s[i].Score += 100
 			case "StatefulSet":
-				s[i].Score -= 1000
+				s[i].Score -= 10000
 			case "DaemonSet":
-				s[i].Score -= 1000
+				s[i].Score -= 10000
 			}
 		}
 	}
@@ -76,23 +99,24 @@ func (s PodCandidateSet) scoreByOwnerType() {
 func (s PodCandidateSet) scoreByCriticality() {
 	for i := range s {
 		if s[i].Pod.Namespace == "kube-system" {
-			s[i].Score -= 1000
+			s[i].Score -= 10000
 		}
 
 		switch s[i].Pod.Spec.PriorityClassName {
 		case "system-cluster-critical":
-			s[i].Score -= 1000
+			s[i].Score -= 10000
 		case "system-node-critical":
-			s[i].Score -= 1000
+			s[i].Score -= 10000
 		}
 
 		if _, ok := s[i].Pod.Annotations["scheduler.alpha.kubernetes.io/critical-pod"]; ok {
-			s[i].Score -= 1000
+			s[i].Score -= 10000
 		}
 	}
 }
 
-func (s PodCandidateSet) SelectPodForEviction() *v1.Pod {
+func (s PodCandidateSet) SelectPodForEviction(minPodAge time.Duration) *v1.Pod {
+	s.scoreByAge(minPodAge)
 	s.scoreByQOSClass()
 	s.scoreByOwnerType()
 	s.scoreByCriticality()

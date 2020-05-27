@@ -1,10 +1,11 @@
-package loadwatcher
+package pressurecooker
 
 import (
 	"fmt"
+
 	"github.com/golang/glog"
-	"github.com/mittwald/kubernetes-loadwatcher/pkg/jsonpatch"
-	"k8s.io/api/core/v1"
+	"github.com/rtreffer/kubernetes-pressurecooker/pkg/jsonpatch"
+	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 )
@@ -24,7 +25,7 @@ func (t *Tainter) IsNodeTainted() (bool, error) {
 	return false, nil
 }
 
-func (t *Tainter) TaintNode(evt LoadThresholdEvent) error {
+func (t *Tainter) TaintNode(evt PressureThresholdEvent) error {
 	node, err := t.client.CoreV1().Nodes().Get(t.nodeName, metav1.GetOptions{})
 	if err != nil {
 		return err
@@ -51,7 +52,7 @@ func (t *Tainter) TaintNode(evt LoadThresholdEvent) error {
 
 	_, err = t.client.CoreV1().Nodes().Update(nodeCopy)
 
-	t.recorder.Eventf(t.nodeRef, v1.EventTypeWarning, "LoadThresholdExceeded", "load5 on node was %.2f; exceeded threshold of %.2f. tainting node", evt.Load5, evt.LoadThreshold)
+	t.recorder.Eventf(t.nodeRef, v1.EventTypeWarning, "CPUPressureExceeded", "pressure over 5 minutes on node was %.2f, tainting node", evt.Avg300)
 
 	if err != nil {
 		t.recorder.Eventf(t.nodeRef, v1.EventTypeWarning, "NodePatchError", "could not patch node: %s", err.Error())
@@ -61,7 +62,7 @@ func (t *Tainter) TaintNode(evt LoadThresholdEvent) error {
 	return nil
 }
 
-func (t *Tainter) UntaintNode(evt LoadThresholdEvent) error {
+func (t *Tainter) UntaintNode(evt PressureThresholdEvent) error {
 	node, err := t.client.CoreV1().Nodes().Get(t.nodeName, metav1.GetOptions{})
 	if err != nil {
 		return err
@@ -81,15 +82,15 @@ func (t *Tainter) UntaintNode(evt LoadThresholdEvent) error {
 		return nil
 	}
 
-	t.recorder.Eventf(t.nodeRef, v1.EventTypeNormal, "LoadThresholdDeceeded", "load15 on node was %.2f; deceeded threshold of %.2f. untainting node", evt.Load15, evt.LoadThreshold)
+	t.recorder.Eventf(t.nodeRef, v1.EventTypeNormal, "LoadThresholdDeceeded", "pressure on node was %.2f over 5 minutes. untainting node", evt.Avg300)
 
 	_, err = t.client.CoreV1().Nodes().Patch(t.nodeName, types.JSONPatchType, jsonpatch.PatchList{{
-		Op: "test",
-		Path: fmt.Sprintf("/spec/taints/%d/key", taintIndex),
+		Op:    "test",
+		Path:  fmt.Sprintf("/spec/taints/%d/key", taintIndex),
 		Value: TaintKey,
 	}, {
-		Op:   "remove",
-		Path: fmt.Sprintf("/spec/taints/%d", taintIndex),
+		Op:    "remove",
+		Path:  fmt.Sprintf("/spec/taints/%d", taintIndex),
 		Value: "",
 	}}.ToJSON())
 
