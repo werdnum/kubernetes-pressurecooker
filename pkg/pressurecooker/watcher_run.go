@@ -42,10 +42,10 @@ func (w *Watcher) Run(closeChan chan struct{}) (<-chan PressureThresholdEvent, <
 				glog.Infof("current state: high_load=%t avg10=%.2f avg60=%.2f avg300=%.2f threshold=%.2f",
 					w.isCurrentlyHigh, cpu.Some.Avg10, cpu.Some.Avg60, cpu.Some.Avg300, w.PressureThreshold)
 
-				if cpu.Some.Avg300 >= w.PressureThreshold && !w.isCurrentlyHigh {
+				if cpu.Some.Avg300 >= w.PressureThreshold {
 					w.isCurrentlyHigh = true
 					exceeded <- PressureThresholdEvent(*cpu.Some)
-				} else if cpu.Some.Avg300 < w.PressureThreshold && cpu.Some.Avg60 < w.PressureThreshold && cpu.Some.Avg10 < w.PressureThreshold && w.isCurrentlyHigh {
+				} else if cpu.Some.Avg300 < w.PressureThreshold && cpu.Some.Avg60 < w.PressureThreshold && cpu.Some.Avg10 < w.PressureThreshold {
 					w.isCurrentlyHigh = false
 					deceeded <- PressureThresholdEvent(*cpu.Some)
 				}

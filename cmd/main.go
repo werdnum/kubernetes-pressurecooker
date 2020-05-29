@@ -121,13 +121,18 @@ func main() {
 				return
 			}
 
-			pressureThresholdExceeded.Set(1)
-			pressureThresholdExceededTotal.Inc()
+			if isTainted {
+				continue
+			}
 
 			glog.Infof("5 minute pressure average exceeded threshold, avg300=%f", evt.Avg300)
 
 			if err := t.TaintNode(evt); err != nil {
 				glog.Errorf("error while tainting node: %s", err.Error())
+			} else {
+				isTainted = true
+				pressureThresholdExceeded.Set(1)
+				pressureThresholdExceededTotal.Inc()
 			}
 
 			if _, err := e.EvictPod(evt); err != nil {
@@ -139,14 +144,19 @@ func main() {
 				return
 			}
 
-			pressureThresholdExceeded.Set(0)
-			pressureRecoveredTotal.Inc()
+			if !isTainted {
+				continue
+			}
 
 			glog.Infof("pressure deceeded threshold, avg300=%f avg60=%f avg10=%f", evt.Avg300, evt.Avg60, evt.Avg10)
-
 			if err := t.UntaintNode(evt); err != nil {
 				glog.Errorf("error while removing taint from node: %s", err.Error())
+			} else {
+				isTainted = false
+				pressureThresholdExceeded.Set(0)
+				pressureRecoveredTotal.Inc()
 			}
+
 		case err := <-errs:
 			glog.Errorf("error while polling for status updates: %s", err.Error())
 		}
