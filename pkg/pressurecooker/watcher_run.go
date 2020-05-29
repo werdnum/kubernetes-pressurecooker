@@ -43,8 +43,12 @@ func (w *Watcher) Run(closeChan chan struct{}) (<-chan PressureThresholdEvent, <
 					w.isCurrentlyHigh, cpu.Some.Avg10, cpu.Some.Avg60, cpu.Some.Avg300, w.PressureThreshold)
 
 				if cpu.Some.Avg300 >= w.PressureThreshold {
-					w.isCurrentlyHigh = true
-					exceeded <- PressureThresholdEvent(*cpu.Some)
+					if !w.isCurrentlyHigh {
+						w.isCurrentlyHigh = true
+						exceeded <- PressureThresholdEvent(*cpu.Some)
+					} else if cpu.Some.Avg60 >= w.PressureThreshold && cpu.Some.Avg10 >= w.PressureThreshold {
+						exceeded <- PressureThresholdEvent(*cpu.Some)
+					}
 				} else if cpu.Some.Avg300 < w.PressureThreshold && cpu.Some.Avg60 < w.PressureThreshold && cpu.Some.Avg10 < w.PressureThreshold {
 					w.isCurrentlyHigh = false
 					deceeded <- PressureThresholdEvent(*cpu.Some)
