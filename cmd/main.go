@@ -122,6 +122,9 @@ func main() {
 			}
 
 			if isTainted {
+				if _, err := e.EvictPod(evt); err != nil {
+					glog.Errorf("error while evicting pod: %s", err.Error())
+				}
 				continue
 			}
 
@@ -133,10 +136,6 @@ func main() {
 				isTainted = true
 				pressureThresholdExceeded.Set(1)
 				pressureThresholdExceededTotal.Inc()
-			}
-
-			if _, err := e.EvictPod(evt); err != nil {
-				glog.Errorf("error while evicting pod: %s", err.Error())
 			}
 		case evt, ok := <-dec:
 			if !ok {
