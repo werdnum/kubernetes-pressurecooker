@@ -4,11 +4,25 @@ import (
 	"time"
 
 	"github.com/golang/glog"
+	"github.com/prometheus/client_golang/prometheus"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/api/policy/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
 )
+
+var (
+	prometheusNamespace = "pressurecooker"
+	podsEvictedTotal    = prometheus.NewGauge(prometheus.GaugeOpts{
+		Namespace: prometheusNamespace,
+		Name:      "pods_evicted_total",
+		Help:      "total number of pods evicted on this node",
+	})
+)
+
+func init() {
+	prometheus.MustRegister(podsEvictedTotal)
+}
 
 func (e *Evicter) CanEvict() bool {
 	if e.lastEviction.IsZero() {
@@ -54,6 +68,8 @@ func (e *Evicter) EvictPod(evt PressureThresholdEvent) (bool, error) {
 			Namespace: podToEvict.ObjectMeta.Namespace,
 		},
 	}
+
+	podsEvictedTotal.Inc()
 
 	glog.Infof("eviction: %+v", eviction)
 

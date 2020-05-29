@@ -7,4 +7,5 @@ type StartupFlags struct {
 	EvictBackoff   string
 	MinPodAge      string
 	NodeName       string
+	MetricsPort    int
 }
