@@ -25,6 +25,24 @@ func (t *Tainter) IsNodeTainted() (bool, error) {
 	return false, nil
 }
 
+func (t *Tainter) IsPressurecookerDisabled() (bool, error) {
+	node, err := t.client.CoreV1().Nodes().Get(t.nodeName, metav1.GetOptions{})
+	if err != nil {
+		return false, err
+	}
+
+	for k, v := range node.Labels {
+		if k != "pressurecooker.enabled" {
+			continue
+		}
+		if v == "FALSE" || v == "false" {
+			return true, nil
+		}
+	}
+
+	return false, nil
+}
+
 func (t *Tainter) TaintNode(evt PressureThresholdEvent) error {
 	node, err := t.client.CoreV1().Nodes().Get(t.nodeName, metav1.GetOptions{})
 	if err != nil {

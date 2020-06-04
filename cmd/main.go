@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"github.com/golang/glog"
 	"github.com/prometheus/client_golang/prometheus"
@@ -34,6 +35,11 @@ var (
 		Namespace: prometheusNamespace,
 		Name:      "pressure_recovered_total",
 		Help:      "number of times the pressure on the node recovered",
+	})
+	pressureEnabled = prometheus.NewGauge(prometheus.GaugeOpts{
+		Namespace: prometheusNamespace,
+		Name:      "enabled",
+		Help:      "pressurecooker is enabled (1) or disabled (0)",
 	})
 )
 
@@ -105,6 +111,17 @@ func main() {
 		panic(err)
 	}
 
+	isDisabled, err := t.IsPressurecookerDisabled()
+	lastDisabledCheck := time.Now()
+	if err != nil {
+		panic(err)
+	}
+	if isDisabled {
+		pressureEnabled.Set(0)
+	} else {
+		pressureEnabled.Set(1)
+	}
+
 	w.SetAsHigh(isTainted)
 	if isTainted {
 		pressureThresholdExceeded.Set(1)
@@ -119,6 +136,32 @@ func main() {
 			if !ok {
 				glog.Infof("exceedance channel closed; stopping")
 				return
+			}
+
+			if time.Now().Sub(lastDisabledCheck) > 1*time.Minute {
+				if disabled, err := t.IsPressurecookerDisabled(); err == nil {
+					isDisabled = disabled
+					if isDisabled {
+						pressureEnabled.Set(0)
+					} else {
+						pressureEnabled.Set(1)
+					}
+				} else {
+					glog.Errorf("could not check pressurecooker.enabled: %s", err.Error())
+				}
+				lastDisabledCheck = time.Now()
+			}
+			if isDisabled && isTainted {
+				if err := t.UntaintNode(pressurecooker.PressureThresholdEvent{}); err != nil {
+					glog.Errorf("error while untainting node: %s", err.Error())
+				} else {
+					isTainted = false
+				}
+			}
+
+			if isDisabled {
+				glog.Infof("pressurecooker disabled, pressure: %v", evt)
+				continue
 			}
 
 			if isTainted {
