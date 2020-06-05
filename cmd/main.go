@@ -47,6 +47,7 @@ func main() {
 	prometheus.MustRegister(pressureThresholdExceeded)
 	prometheus.MustRegister(pressureThresholdExceededTotal)
 	prometheus.MustRegister(pressureRecoveredTotal)
+	prometheus.MustRegister(pressureEnabled)
 
 	var f config.StartupFlags
 
@@ -58,6 +59,10 @@ func main() {
 	flag.StringVar(&f.NodeName, "node-name", "", "current node name")
 	flag.IntVar(&f.MetricsPort, "metrics-port", 8080, "port for prometheus metrics endpoint")
 	flag.Parse()
+
+	if f.NodeName == "" {
+		panic("-node-name not set")
+	}
 
 	cfg, err := loadKubernetesConfig(f)
 	if err != nil {
