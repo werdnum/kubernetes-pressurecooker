@@ -38,6 +38,9 @@ spec:
             {{- end }}
             - -evict-backoff={{ .Values.evictBackoff }}
             - -v=8
+            {{- if .Values.metricsPort }}
+            - -metrics-port={{ .Values.metricsPort }}
+            {{- end }}
           resources:
 {{ toYaml .Values.resources | indent 12 }}
     {{- with .Values.nodeSelector }}
@@ -49,7 +52,7 @@ spec:
 {{ toYaml . | indent 8 }}
     {{- end }}
       tolerations:
-        - key: loadwatcher.mittwald.systems/load-exceeded
+        - key: pressurecooker/load-exceeded
           operator: Exists
           effect: NoSchedule
         {{- with .Values.tolerations }}

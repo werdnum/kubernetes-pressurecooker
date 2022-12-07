@@ -58,6 +58,7 @@ func main() {
 	flag.StringVar(&f.MinPodAge, "min-pod-age", "5m", "minimum age of Pods to be evicted")
 	flag.StringVar(&f.NodeName, "node-name", "", "current node name")
 	flag.IntVar(&f.MetricsPort, "metrics-port", 8080, "port for prometheus metrics endpoint")
+	flag.IntVar(&f.TargetMetric, "target-metric", 300, "target metric to use / 10,60,300 for pressure; and 1,5,15 for avarage/")
 	flag.Parse()
 
 	if f.NodeName == "" {

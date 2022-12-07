@@ -1,6 +1,6 @@
 image:
   repository: main-harbor.btigroup.io/docker-system/kubernetes-pressurecooker
-  tag: 1.0
+  tag: "1.0"
   pullPolicy: IfNotPresent
 
 nameOverride: ""
@@ -9,6 +9,7 @@ fullnameOverride: ""
 taintThreshold: 70
 evictThreshold: 90
 evictBackoff: 5m
+metricsPort: 8080
 
 resources: {}
   # We usually recommend not to specify default resources and to leave this as a conscious
