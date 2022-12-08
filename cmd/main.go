@@ -59,6 +59,7 @@ func main() {
 	flag.StringVar(&f.NodeName, "node-name", "", "current node name")
 	flag.IntVar(&f.MetricsPort, "metrics-port", 8080, "port for prometheus metrics endpoint")
 	flag.IntVar(&f.TargetMetric, "target-metric", 300, "target metric to use / 10,60,300 for pressure; and 1,5,15 for avarage/")
+	flag.BoolVar(&f.UseAvarage, "use-avarage", false, "use loadavg instead of proc/pressure/cpu")
 	flag.Parse()
 
 	if f.NodeName == "" {
@@ -122,18 +123,10 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	if isDisabled {
-		pressureEnabled.Set(0)
-	} else {
-		pressureEnabled.Set(1)
-	}
 
 	w.SetAsHigh(isTainted)
-	if isTainted {
-		pressureThresholdExceeded.Set(1)
-	} else {
-		pressureThresholdExceeded.Set(0)
-	}
+
+	handlePrometheusMetrics(isDisabled, isTainted)
 
 	exc, dec, errs := w.Run(closeChan)
 	for {
@@ -208,6 +201,21 @@ func main() {
 		case err := <-errs:
 			glog.Errorf("error while polling for status updates: %s", err.Error())
 		}
+	}
+}
+
+func handlePrometheusMetrics(isDisabled bool, isTainted bool) {
+
+	if isDisabled {
+		pressureEnabled.Set(0)
+	} else {
+		pressureEnabled.Set(1)
+	}
+
+	if isTainted {
+		pressureThresholdExceeded.Set(1)
+	} else {
+		pressureThresholdExceeded.Set(0)
 	}
 }
 
