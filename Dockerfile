@@ -1,11 +1,11 @@
-FROM amd64/golang:1.18 AS builder
+FROM golang:1.18-bullseye AS builder
 
 COPY . /work
 WORKDIR /work
 RUN useradd pressurecooker
-RUN go build -o app/pressurecooker cmd/main.go
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o app/pressurecooker cmd/main.go
 
-FROM  golang/alpine
+FROM  scratch
 
 COPY  --from=builder /work/app/pressurecooker /usr/sbin/pressurecooker
 COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
