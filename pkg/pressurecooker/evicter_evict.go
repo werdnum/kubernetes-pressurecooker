@@ -29,13 +29,12 @@ func (e *Evicter) CanEvict() bool {
 		return true
 	}
 
-	return time.Now().Sub(e.lastEviction) > e.backoff
+	evictionTime := time.Now().Sub(e.lastEviction)
+	glog.Infof("Checking for eviction, Eviction time  in abs Seconds %.2f and backoffTime in abs secconds %.2f difference ", evictionTime, e.backoff, evictionTime)
+	return evictionTime > e.backoff
 }
 
 func (e *Evicter) EvictPod(evt PressureThresholdEvent) (bool, error) {
-	if evt.Avg300 < e.threshold {
-		return false, nil
-	}
 
 	if !e.CanEvict() {
 		glog.Infof("eviction threshold exceeded; still in back-off")
@@ -75,8 +74,8 @@ func (e *Evicter) EvictPod(evt PressureThresholdEvent) (bool, error) {
 
 	e.lastEviction = time.Now()
 
-	e.recorder.Eventf(podToEvict, v1.EventTypeWarning, "EvictHighLoad", "evicting pod due to high cpu pressure on node: avg300=%.2f threshold=%.2f", evt.Avg300, e.threshold)
-	e.recorder.Eventf(e.nodeRef, v1.EventTypeWarning, "EvictHighLoad", "evicting pod due to high cpu pressure on node: avg300=%.2f threshold=%.2f", evt.Avg300, e.threshold)
+	e.recorder.Eventf(podToEvict, v1.EventTypeWarning, "EvictHighLoad", "evicting pod due to %s", evt.Message)
+	e.recorder.Eventf(e.nodeRef, v1.EventTypeWarning, "EvictHighLoad", "evicting pod due to high cpu pressure on node: %s", evt.Message)
 
 	err = e.client.CoreV1().Pods(podToEvict.Namespace).Evict(&eviction)
 	return true, err

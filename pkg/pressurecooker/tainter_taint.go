@@ -2,6 +2,7 @@ package pressurecooker
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/golang/glog"
 	"github.com/rtreffer/kubernetes-pressurecooker/pkg/jsonpatch"
@@ -31,13 +32,10 @@ func (t *Tainter) IsPressurecookerDisabled() (bool, error) {
 		return false, err
 	}
 
-	for k, v := range node.Labels {
-		if k != "pressurecooker.enabled" {
-			continue
-		}
-		if v == "FALSE" || v == "false" {
-			return true, nil
-		}
+	v, found := node.Labels["pressurecooker.enabled"]
+
+	if found && strings.ToLower(v) == "false" {
+		return true, nil
 	}
 
 	return false, nil
@@ -70,7 +68,7 @@ func (t *Tainter) TaintNode(evt PressureThresholdEvent) error {
 
 	_, err = t.client.CoreV1().Nodes().Update(nodeCopy)
 
-	t.recorder.Eventf(t.nodeRef, v1.EventTypeWarning, "CPUPressureExceeded", "pressure over 5 minutes on node was %.2f, tainting node", evt.Avg300)
+	t.recorder.Eventf(t.nodeRef, v1.EventTypeWarning, "CPUPressureExceeded", "pressure over 5 minutes on node was %.2f, tainting node", evt.MeticValue)
 
 	if err != nil {
 		t.recorder.Eventf(t.nodeRef, v1.EventTypeWarning, "NodePatchError", "could not patch node: %s", err.Error())
@@ -100,7 +98,7 @@ func (t *Tainter) UntaintNode(evt PressureThresholdEvent) error {
 		return nil
 	}
 
-	t.recorder.Eventf(t.nodeRef, v1.EventTypeNormal, "LoadThresholdDeceeded", "pressure on node was %.2f over 5 minutes. untainting node", evt.Avg300)
+	t.recorder.Eventf(t.nodeRef, v1.EventTypeNormal, "LoadThresholdDeceeded", "pressure on node was %.2f over 5 minutes. untainting node", evt.MeticValue)
 
 	_, err = t.client.CoreV1().Nodes().Patch(t.nodeName, types.JSONPatchType, jsonpatch.PatchList{{
 		Op:    "test",

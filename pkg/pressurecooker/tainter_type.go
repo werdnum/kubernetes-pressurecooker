@@ -2,7 +2,7 @@ package pressurecooker
 
 import (
 	"github.com/golang/glog"
-	"k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/scheme"
@@ -31,10 +31,9 @@ func NewTainter(c kubernetes.Interface, nodeName string) (*Tainter, error) {
 	r := b.NewRecorder(scheme.Scheme, v1.EventSource{Host: nodeName, Component: ComponentName + "/tainter"})
 
 	nodeRef := &v1.ObjectReference{
-		Kind:      "Node",
-		Name:      nodeName,
-		UID:       types.UID(nodeName),
-		Namespace: "",
+		Kind: "Node",
+		Name: nodeName,
+		UID:  types.UID(nodeName),
 	}
 
 	return &Tainter{

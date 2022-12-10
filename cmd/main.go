@@ -58,7 +58,7 @@ func main() {
 	flag.StringVar(&f.MinPodAge, "min-pod-age", "5m", "minimum age of Pods to be evicted")
 	flag.StringVar(&f.NodeName, "node-name", "", "current node name")
 	flag.IntVar(&f.MetricsPort, "metrics-port", 8080, "port for prometheus metrics endpoint")
-	flag.IntVar(&f.TargetMetric, "target-metric", 300, "target metric to use / 10,60,300 for pressure; and 1,5,15 for avarage/")
+	flag.IntVar(&f.TargetMetric, "target-metric", 3, "target metric to use / 10,60,300 for pressure; and 1,5,15 for avarage/")
 	flag.BoolVar(&f.UseAvarage, "use-avarage", false, "use loadavg instead of proc/pressure/cpu")
 	flag.Parse()
 
@@ -86,7 +86,7 @@ func main() {
 		panic(err)
 	}
 
-	e, err := pressurecooker.NewEvicter(c, f.EvictThreshold, f.NodeName, f.EvictBackoff, f.MinPodAge)
+	e, err := pressurecooker.NewEvicter(c, f.NodeName, f.EvictBackoff, f.MinPodAge)
 	if err != nil {
 		panic(err)
 	}
@@ -128,12 +128,12 @@ func main() {
 
 	handlePrometheusMetrics(isDisabled, isTainted)
 
-	exc, dec, errs := w.Run(closeChan)
+	exc, errs := w.Run(closeChan, f.UseAvarage, f.TargetMetric)
 	for {
 		select {
 		case evt, ok := <-exc:
 			if !ok {
-				glog.Infof("exceedance channel closed; stopping")
+				glog.Infof("Channel closed; stopping")
 				return
 			}
 
@@ -150,6 +150,7 @@ func main() {
 				}
 				lastDisabledCheck = time.Now()
 			}
+
 			if isDisabled && isTainted {
 				if err := t.UntaintNode(pressurecooker.PressureThresholdEvent{}); err != nil {
 					glog.Errorf("error while untainting node: %s", err.Error())
@@ -163,41 +164,39 @@ func main() {
 				continue
 			}
 
-			if isTainted {
-				if _, err := e.EvictPod(evt); err != nil {
-					glog.Errorf("error while evicting pod: %s", err.Error())
+			if evt.IsCurrentlyHigh {
+				if isTainted && evt.MeticValue > f.EvictThreshold {
+					glog.Infof("Trying to evict pod pressureMetric %0.2f pressureThreshold %0.2f", evt.MeticValue, f.EvictThreshold)
+					if _, err := e.EvictPod(evt); err != nil {
+						glog.Errorf("error while evicting pod: %s", err.Error())
+					}
+					continue
 				}
-				continue
-			}
 
-			glog.Infof("5 minute pressure average exceeded threshold, avg300=%f", evt.Avg300)
+				glog.Infof(evt.Message)
 
-			if err := t.TaintNode(evt); err != nil {
-				glog.Errorf("error while tainting node: %s", err.Error())
+				if err := t.TaintNode(evt); err != nil {
+					glog.Errorf("error while tainting node: %s", err.Error())
+				} else {
+					isTainted = true
+					pressureThresholdExceeded.Set(1)
+					pressureThresholdExceededTotal.Inc()
+				}
 			} else {
-				isTainted = true
-				pressureThresholdExceeded.Set(1)
-				pressureThresholdExceededTotal.Inc()
-			}
-		case evt, ok := <-dec:
-			if !ok {
-				glog.Infof("deceedance channel closed; stopping")
-				return
-			}
 
-			if !isTainted {
-				continue
-			}
+				if !isTainted {
+					continue
+				}
 
-			glog.Infof("pressure deceeded threshold, avg300=%f avg60=%f avg10=%f", evt.Avg300, evt.Avg60, evt.Avg10)
-			if err := t.UntaintNode(evt); err != nil {
-				glog.Errorf("error while removing taint from node: %s", err.Error())
-			} else {
-				isTainted = false
-				pressureThresholdExceeded.Set(0)
-				pressureRecoveredTotal.Inc()
+				glog.Infof(evt.Message)
+				if err := t.UntaintNode(evt); err != nil {
+					glog.Errorf("error while removing taint from node: %s", err.Error())
+				} else {
+					isTainted = false
+					pressureThresholdExceeded.Set(0)
+					pressureRecoveredTotal.Inc()
+				}
 			}
-
 		case err := <-errs:
 			glog.Errorf("error while polling for status updates: %s", err.Error())
 		}

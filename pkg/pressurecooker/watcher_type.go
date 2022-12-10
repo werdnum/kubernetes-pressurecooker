@@ -6,7 +6,11 @@ import (
 	"github.com/prometheus/procfs"
 )
 
-type PressureThresholdEvent procfs.PSILine
+type PressureThresholdEvent struct {
+	Message         string
+	MeticValue      float64
+	IsCurrentlyHigh bool
+}
 
 type Watcher struct {
 	TickerInterval    time.Duration
