@@ -1,6 +1,6 @@
 image:
   repository: main-harbor.btigroup.io/docker-system/kubernetes-pressurecooker
-  tag: "2.2.4"
+  tag: "2.5.1"
   pullPolicy: Always 
 
 nameOverride: ""
