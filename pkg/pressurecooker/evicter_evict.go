@@ -1,12 +1,13 @@
 package pressurecooker
 
 import (
+	"context"
 	"time"
 
 	"github.com/golang/glog"
 	"github.com/prometheus/client_golang/prometheus"
-	v1 "k8s.io/api/core/v1"
-	"k8s.io/api/policy/v1beta1"
+	corev1 "k8s.io/api/core/v1"
+	policyv1 "k8s.io/api/policy/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
 )
@@ -45,7 +46,7 @@ func (e *Evicter) EvictPod(evt PressureThresholdEvent) (bool, error) {
 
 	fieldSelector := fields.OneTermEqualSelector("spec.nodeName", e.nodeName)
 
-	podsOnNode, err := e.client.CoreV1().Pods("").List(metav1.ListOptions{
+	podsOnNode, err := e.client.CoreV1().Pods("").List(context.TODO(), metav1.ListOptions{
 		FieldSelector: fieldSelector.String(),
 	})
 
@@ -57,11 +58,11 @@ func (e *Evicter) EvictPod(evt PressureThresholdEvent) (bool, error) {
 	podToEvict := candidates.SelectPodForEviction(e.minPodAge)
 
 	if podToEvict == nil {
-		e.recorder.Eventf(e.nodeRef, v1.EventTypeWarning, "NoPodToEvict", "wanted to evict Pod, but no suitable candidate found")
+		e.recorder.Eventf(e.nodeRef, corev1.EventTypeWarning, "NoPodToEvict", "wanted to evict Pod, but no suitable candidate found")
 		return false, nil
 	}
 
-	eviction := v1beta1.Eviction{
+	eviction := policyv1.Eviction{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      podToEvict.ObjectMeta.Name,
 			Namespace: podToEvict.ObjectMeta.Namespace,
@@ -74,9 +75,9 @@ func (e *Evicter) EvictPod(evt PressureThresholdEvent) (bool, error) {
 
 	e.lastEviction = time.Now()
 
-	e.recorder.Eventf(podToEvict, v1.EventTypeWarning, "EvictHighLoad", "evicting pod due to %s", evt.Message)
-	e.recorder.Eventf(e.nodeRef, v1.EventTypeWarning, "EvictHighLoad", "evicting pod due to high cpu pressure on node: %s", evt.Message)
+	e.recorder.Eventf(podToEvict, corev1.EventTypeWarning, "EvictHighLoad", "evicting pod due to %s", evt.Message)
+	e.recorder.Eventf(e.nodeRef, corev1.EventTypeWarning, "EvictHighLoad", "evicting pod due to high cpu pressure on node: %s", evt.Message)
 
-	err = e.client.CoreV1().Pods(podToEvict.Namespace).Evict(&eviction)
+	err = e.client.CoreV1().Pods(podToEvict.Namespace).EvictV1(context.TODO(), &eviction)
 	return true, err
 }

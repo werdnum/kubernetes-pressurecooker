@@ -1,6 +1,7 @@
 package pressurecooker
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
@@ -12,7 +13,7 @@ import (
 )
 
 func (t *Tainter) IsNodeTainted() (bool, error) {
-	node, err := t.client.CoreV1().Nodes().Get(t.nodeName, metav1.GetOptions{})
+	node, err := t.client.CoreV1().Nodes().Get(context.TODO(), t.nodeName, metav1.GetOptions{})
 	if err != nil {
 		return false, err
 	}
@@ -27,7 +28,7 @@ func (t *Tainter) IsNodeTainted() (bool, error) {
 }
 
 func (t *Tainter) IsPressurecookerDisabled() (bool, error) {
-	node, err := t.client.CoreV1().Nodes().Get(t.nodeName, metav1.GetOptions{})
+	node, err := t.client.CoreV1().Nodes().Get(context.TODO(), t.nodeName, metav1.GetOptions{})
 	if err != nil {
 		return false, err
 	}
@@ -42,7 +43,7 @@ func (t *Tainter) IsPressurecookerDisabled() (bool, error) {
 }
 
 func (t *Tainter) TaintNode(evt PressureThresholdEvent) error {
-	node, err := t.client.CoreV1().Nodes().Get(t.nodeName, metav1.GetOptions{})
+	node, err := t.client.CoreV1().Nodes().Get(context.TODO(), t.nodeName, metav1.GetOptions{})
 	if err != nil {
 		return err
 	}
@@ -66,7 +67,7 @@ func (t *Tainter) TaintNode(evt PressureThresholdEvent) error {
 		Effect: v1.TaintEffectPreferNoSchedule,
 	})
 
-	_, err = t.client.CoreV1().Nodes().Update(nodeCopy)
+	_, err = t.client.CoreV1().Nodes().Update(context.TODO(), nodeCopy, metav1.UpdateOptions{})
 
 	t.recorder.Eventf(t.nodeRef, v1.EventTypeWarning, "CPUPressureExceeded", "pressure over 5 minutes on node was %.2f, tainting node", evt.MeticValue)
 
@@ -79,7 +80,7 @@ func (t *Tainter) TaintNode(evt PressureThresholdEvent) error {
 }
 
 func (t *Tainter) UntaintNode(evt PressureThresholdEvent) error {
-	node, err := t.client.CoreV1().Nodes().Get(t.nodeName, metav1.GetOptions{})
+	node, err := t.client.CoreV1().Nodes().Get(context.TODO(), t.nodeName, metav1.GetOptions{})
 	if err != nil {
 		return err
 	}
@@ -100,7 +101,7 @@ func (t *Tainter) UntaintNode(evt PressureThresholdEvent) error {
 
 	t.recorder.Eventf(t.nodeRef, v1.EventTypeNormal, "LoadThresholdDeceeded", "pressure on node was %.2f over 5 minutes. untainting node", evt.MeticValue)
 
-	_, err = t.client.CoreV1().Nodes().Patch(t.nodeName, types.JSONPatchType, jsonpatch.PatchList{{
+	_, err = t.client.CoreV1().Nodes().Patch(context.TODO(), t.nodeName, types.JSONPatchType, jsonpatch.PatchList{{
 		Op:    "test",
 		Path:  fmt.Sprintf("/spec/taints/%d/key", taintIndex),
 		Value: TaintKey,
@@ -108,7 +109,7 @@ func (t *Tainter) UntaintNode(evt PressureThresholdEvent) error {
 		Op:    "remove",
 		Path:  fmt.Sprintf("/spec/taints/%d", taintIndex),
 		Value: "",
-	}}.ToJSON())
+	}}.ToJSON(), metav1.PatchOptions{})
 
 	if err != nil {
 		t.recorder.Eventf(t.nodeRef, v1.EventTypeWarning, "NodePatchError", "could not patch node: %s", err.Error())
