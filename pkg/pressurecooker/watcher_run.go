@@ -32,6 +32,7 @@ func (w *Watcher) Run(closeChan chan struct{}, useAvarage bool, targetMetic int)
 		for {
 			select {
 			case <-ticker:
+				//todo extact colleting data in different method. To optimize logic
 				var res [3]float64
 				if useAvarage {
 
@@ -46,7 +47,7 @@ func (w *Watcher) Run(closeChan chan struct{}, useAvarage bool, targetMetic int)
 						continue
 					}
 
-					glog.Infof("current Avarage state:  LoadAvg : Load1=%.2f, Load5=%.2f, Load15=%.2f threshold=%.2f HIGH_LOAD=%t",
+					glog.Infof("current Avarage state:  LoadAvg : Load1 |%.2f|, Load5 |%.2f|, Load15 |%.2f| threshold |%.2f| HIGH_LOAD |%t|",
 						avg.Load1, avg.Load5, avg.Load15, w.PressureThreshold, w.isCurrentlyHigh)
 
 					res = extactWorkingData(nil, avg, useAvarage)

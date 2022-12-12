@@ -7,7 +7,7 @@ import (
 	"github.com/golang/glog"
 	"github.com/prometheus/client_golang/prometheus"
 	corev1 "k8s.io/api/core/v1"
-	policyv1 "k8s.io/api/policy/v1"
+	betav1 "k8s.io/api/policy/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
 )
@@ -31,7 +31,7 @@ func (e *Evicter) CanEvict() bool {
 	}
 
 	evictionTime := time.Now().Sub(e.lastEviction)
-	glog.Infof("Checking for eviction, Eviction time  in abs Seconds %.2f and backoffTime in abs secconds %.2f difference ", evictionTime, e.backoff, evictionTime)
+	glog.Infof("Checking for eviction, Eviction time  in  Seconds |%5d| and backoffTime in secconds |%5d| Time till next evict |%5d| ", evictionTime.Abs().Seconds(), e.backoff.Abs().Seconds(), e.backoff.Abs().Seconds()-evictionTime.Abs().Abs().Seconds())
 	return evictionTime > e.backoff
 }
 
@@ -62,7 +62,7 @@ func (e *Evicter) EvictPod(evt PressureThresholdEvent) (bool, error) {
 		return false, nil
 	}
 
-	eviction := policyv1.Eviction{
+	eviction := betav1.Eviction{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      podToEvict.ObjectMeta.Name,
 			Namespace: podToEvict.ObjectMeta.Namespace,
@@ -78,6 +78,6 @@ func (e *Evicter) EvictPod(evt PressureThresholdEvent) (bool, error) {
 	e.recorder.Eventf(podToEvict, corev1.EventTypeWarning, "EvictHighLoad", "evicting pod due to %s", evt.Message)
 	e.recorder.Eventf(e.nodeRef, corev1.EventTypeWarning, "EvictHighLoad", "evicting pod due to high cpu pressure on node: %s", evt.Message)
 
-	err = e.client.CoreV1().Pods(podToEvict.Namespace).EvictV1(context.TODO(), &eviction)
+	err = e.client.CoreV1().Pods(podToEvict.Namespace).Evict(context.TODO(), &eviction)
 	return true, err
 }

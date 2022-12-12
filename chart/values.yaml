@@ -1,6 +1,6 @@
 image:
   repository: main-harbor.btigroup.io/docker-system/kubernetes-pressurecooker
-  tag: "2.5.1"
+  tag: "2.5.2"
   pullPolicy: Always 
 
 nameOverride: ""
@@ -8,7 +8,7 @@ fullnameOverride: ""
 
 taintThreshold: 25
 evictThreshold: 60
-evictBackoff: 5m
+evictBackoff: 2.12m
 metricsPort: 8080
 useAverage: true
 targetMetric: 2
