@@ -10,17 +10,17 @@ import (
 	"time"
 
 	"github.com/golang/glog"
+	"github.com/marvasgit/kubernetes-multicooker/pkg/config"
+	"github.com/marvasgit/kubernetes-multicooker/pkg/multicooker"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
-	"github.com/rtreffer/kubernetes-pressurecooker/pkg/config"
-	"github.com/rtreffer/kubernetes-pressurecooker/pkg/pressurecooker"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 )
 
 var (
-	prometheusNamespace       = "pressurecooker"
+	prometheusNamespace       = "multicooker"
 	pressureThresholdExceeded = prometheus.NewGauge(prometheus.GaugeOpts{
 		Namespace: prometheusNamespace,
 		Name:      "pressure_threshold_exceeded",
@@ -39,7 +39,7 @@ var (
 	pressureEnabled = prometheus.NewGauge(prometheus.GaugeOpts{
 		Namespace: prometheusNamespace,
 		Name:      "enabled",
-		Help:      "pressurecooker is enabled (1) or disabled (0)",
+		Help:      "multicooker is enabled (1) or disabled (0)",
 	})
 )
 
@@ -76,17 +76,17 @@ func main() {
 		panic(err)
 	}
 
-	w, err := pressurecooker.NewWatcher(f.TaintThreshold)
+	w, err := multicooker.NewWatcher(f.TaintThreshold)
 	if err != nil {
 		panic(err)
 	}
 
-	t, err := pressurecooker.NewTainter(c, f.NodeName)
+	t, err := multicooker.NewTainter(c, f.NodeName)
 	if err != nil {
 		panic(err)
 	}
 
-	e, err := pressurecooker.NewEvicter(c, f.NodeName, f.EvictBackoff, f.MinPodAge)
+	e, err := multicooker.NewEvicter(c, f.NodeName, f.EvictBackoff, f.MinPodAge)
 	if err != nil {
 		panic(err)
 	}
@@ -118,7 +118,7 @@ func main() {
 		panic(err)
 	}
 
-	isDisabled, err := t.IsPressurecookerDisabled()
+	isDisabled, err := t.IsmulticookerDisabled()
 	lastDisabledCheck := time.Now()
 	if err != nil {
 		panic(err)
@@ -138,7 +138,7 @@ func main() {
 			}
 
 			if time.Now().Sub(lastDisabledCheck) > 1*time.Minute {
-				if disabled, err := t.IsPressurecookerDisabled(); err == nil {
+				if disabled, err := t.IsmulticookerDisabled(); err == nil {
 					isDisabled = disabled
 					if isDisabled {
 						pressureEnabled.Set(0)
@@ -146,13 +146,13 @@ func main() {
 						pressureEnabled.Set(1)
 					}
 				} else {
-					glog.Errorf("could not check pressurecooker.enabled: %s", err.Error())
+					glog.Errorf("could not check multicooker.enabled: %s", err.Error())
 				}
 				lastDisabledCheck = time.Now()
 			}
 
 			if isDisabled && isTainted {
-				if err := t.UntaintNode(pressurecooker.PressureThresholdEvent{}); err != nil {
+				if err := t.UntaintNode(multicooker.PressureThresholdEvent{}); err != nil {
 					glog.Errorf("error while untainting node: %s", err.Error())
 				} else {
 					isTainted = false
@@ -160,7 +160,7 @@ func main() {
 			}
 
 			if isDisabled {
-				glog.Infof("pressurecooker disabled, pressure: %v", evt)
+				glog.Infof("multicooker disabled, pressure: %v", evt)
 				continue
 			}
 

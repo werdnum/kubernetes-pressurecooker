@@ -1,4 +1,4 @@
-module github.com/rtreffer/kubernetes-pressurecooker
+module github.com/marvasgit/kubernetes-multicooker
 
 go 1.14
 

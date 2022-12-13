@@ -57,7 +57,7 @@ spec:
 {{ toYaml . | indent 8 }}
     {{- end }}
       tolerations:
-        - key: pressurecooker/load-exceeded
+        - key: multicooker/load-exceeded
           operator: Exists
           effect: NoSchedule
         {{- with .Values.tolerations }}

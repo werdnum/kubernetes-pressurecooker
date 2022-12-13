@@ -20,7 +20,7 @@ Pressure is more sensitive for small overloads, e.g. with pressure information i
 This controller can be started with two threshold flags: `-taint-threshold` and `-evict-threshold`. There are also safeguard flags `-min-pod-age` and `-eviction-backoff`.
 The controller will continuously monitor a node's CPU pressure.
 
-- If the CPU pressure (5min average) exceeds the _taint threshold_, the node will be tainted with a `pressurecooker/load-exceeded` taint with the `PreferNoSchedule` effect. This will instruct Kubernetes to not schedule any additional workloads on this node if at all possible.
+- If the CPU pressure (5min average) exceeds the _taint threshold_, the node will be tainted with a `multicooker/load-exceeded` taint with the `PreferNoSchedule` effect. This will instruct Kubernetes to not schedule any additional workloads on this node if at all possible.
 - If the CPU load (both 5min and 15min average) falls back below the _taint threshold_, the taint will be removed again.
 - If the CPU load (15 min average) exceeds the _eviction threshold_, the controller will pick a suitable Pod running on the node and evict it. However, the following types of Pods will _not_ be evicted:
 

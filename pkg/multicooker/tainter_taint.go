@@ -1,4 +1,4 @@
-package pressurecooker
+package multicooker
 
 import (
 	"context"
@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	"github.com/golang/glog"
-	"github.com/rtreffer/kubernetes-pressurecooker/pkg/jsonpatch"
+	"github.com/marvasgit/kubernetes-multicooker/pkg/jsonpatch"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -27,13 +27,13 @@ func (t *Tainter) IsNodeTainted() (bool, error) {
 	return false, nil
 }
 
-func (t *Tainter) IsPressurecookerDisabled() (bool, error) {
+func (t *Tainter) IsmulticookerDisabled() (bool, error) {
 	node, err := t.client.CoreV1().Nodes().Get(context.TODO(), t.nodeName, metav1.GetOptions{})
 	if err != nil {
 		return false, err
 	}
 
-	v, found := node.Labels["pressurecooker.enabled"]
+	v, found := node.Labels["multicooker.enabled"]
 
 	if found && strings.ToLower(v) == "false" {
 		return true, nil
