@@ -13,7 +13,7 @@ import (
 )
 
 var (
-	prometheusNamespace = "pressurecooker"
+	prometheusNamespace = "multicooker"
 	podsEvictedTotal    = prometheus.NewGauge(prometheus.GaugeOpts{
 		Namespace: prometheusNamespace,
 		Name:      "pods_evicted_total",

@@ -118,7 +118,7 @@ func main() {
 		panic(err)
 	}
 
-	isDisabled, err := t.IsmulticookerDisabled()
+	isDisabled, err := t.IsMulticookerDisabled()
 	lastDisabledCheck := time.Now()
 	if err != nil {
 		panic(err)
@@ -138,7 +138,7 @@ func main() {
 			}
 
 			if time.Now().Sub(lastDisabledCheck) > 1*time.Minute {
-				if disabled, err := t.IsmulticookerDisabled(); err == nil {
+				if disabled, err := t.IsMulticookerDisabled(); err == nil {
 					isDisabled = disabled
 					if isDisabled {
 						pressureEnabled.Set(0)

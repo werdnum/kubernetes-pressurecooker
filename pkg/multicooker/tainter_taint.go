@@ -27,7 +27,7 @@ func (t *Tainter) IsNodeTainted() (bool, error) {
 	return false, nil
 }
 
-func (t *Tainter) IsmulticookerDisabled() (bool, error) {
+func (t *Tainter) IsMulticookerDisabled() (bool, error) {
 	node, err := t.client.CoreV1().Nodes().Get(context.TODO(), t.nodeName, metav1.GetOptions{})
 	if err != nil {
 		return false, err

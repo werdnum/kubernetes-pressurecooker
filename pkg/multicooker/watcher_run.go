@@ -21,8 +21,8 @@ func (w *Watcher) Run(closeChan chan struct{}, useAvarage bool, targetMetic int)
 	if targetMetic < 1 || targetMetic > 3 {
 		glog.Errorf("Target metric is not in available %d choosing midle one", targetMetic)
 		targetMetic = 2
-		initTargetMetric = targetMetic
 	}
+	initTargetMetric = targetMetic
 
 	go func() {
 		defer func() {

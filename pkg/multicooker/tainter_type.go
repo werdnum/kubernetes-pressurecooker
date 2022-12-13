@@ -10,9 +10,9 @@ import (
 	"k8s.io/client-go/tools/record"
 )
 
-const ComponentName = "pressurecooker"
+const ComponentName = "multicooker"
 
-const TaintKey = "pressurecooker/load-exceeded"
+const TaintKey = "multicooker/load-exceeded"
 
 type Tainter struct {
 	client   kubernetes.Interface
