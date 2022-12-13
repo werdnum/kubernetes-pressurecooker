@@ -31,7 +31,6 @@ func (e *Evicter) CanEvict() bool {
 	}
 
 	evictionTime := time.Now().Sub(e.lastEviction)
-	glog.Infof("Checking for eviction, Eviction time  in  Seconds |%5d| and backoffTime in secconds |%5d| Time till next evict |%5d| ", evictionTime.Abs().Seconds(), e.backoff.Abs().Seconds(), e.backoff.Abs().Seconds()-evictionTime.Abs().Abs().Seconds())
 	return evictionTime > e.backoff
 }
 

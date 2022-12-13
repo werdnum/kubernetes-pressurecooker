@@ -166,7 +166,6 @@ func main() {
 
 			if evt.IsCurrentlyHigh {
 				if isTainted && evt.MeticValue > f.EvictThreshold {
-					glog.Infof("Trying to evict pod pressureMetric %0.2f pressureThreshold %0.2f", evt.MeticValue, f.EvictThreshold)
 					if _, err := e.EvictPod(evt); err != nil {
 						glog.Errorf("error while evicting pod: %s", err.Error())
 					}
