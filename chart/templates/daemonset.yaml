@@ -19,6 +19,7 @@ spec:
         app.kubernetes.io/instance: {{ .Release.Name }}
     spec:
       serviceAccountName: {{ include "chart.fullname" . }}
+      priorityClassName : system-node-critical
       containers:
         - name: {{ .Chart.Name }}
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
@@ -38,6 +39,13 @@ spec:
             {{- end }}
             - -evict-backoff={{ .Values.evictBackoff }}
             - -v=8
+            {{- if .Values.metricsPort }}
+            - -metrics-port={{ .Values.metricsPort }}
+            {{- end }}
+            - -use-avarage={{ .Values.useAverage }}
+            {{- if .Values.targetMetric }}
+            - -target-metric={{ .Values.targetMetric }}
+            {{- end }}
           resources:
 {{ toYaml .Values.resources | indent 12 }}
     {{- with .Values.nodeSelector }}
@@ -49,7 +57,7 @@ spec:
 {{ toYaml . | indent 8 }}
     {{- end }}
       tolerations:
-        - key: loadwatcher.mittwald.systems/load-exceeded
+        - key: multicooker/load-exceeded
           operator: Exists
           effect: NoSchedule
         {{- with .Values.tolerations }}

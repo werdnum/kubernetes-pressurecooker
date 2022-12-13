@@ -1,14 +1,17 @@
 image:
-  repository: quay.io/mittwald/kube-loadwatcher
-  tag: stable
-  pullPolicy: IfNotPresent
+  repository: kubernetes-multicooker
+  tag: "1.0.0"
+  pullPolicy: Always 
 
 nameOverride: ""
 fullnameOverride: ""
 
-taintThreshold: ~
-evictThreshold: ~
-evictBackoff: 10m
+taintThreshold: 25
+evictThreshold: 60
+evictBackoff: 2.12m
+metricsPort: 8080
+useAverage: true
+targetMetric: 2
 
 resources: {}
   # We usually recommend not to specify default resources and to leave this as a conscious
