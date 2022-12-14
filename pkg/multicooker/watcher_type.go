@@ -18,9 +18,10 @@ type Watcher struct {
 
 	proc            procfs.FS
 	isCurrentlyHigh bool
+	nodeName        string
 }
 
-func NewWatcher(pressureThreshold float64) (*Watcher, error) {
+func NewWatcher(pressureThreshold float64, nodeName string) (*Watcher, error) {
 	if pressureThreshold == 0 {
 		pressureThreshold = 25
 	}
@@ -34,5 +35,6 @@ func NewWatcher(pressureThreshold float64) (*Watcher, error) {
 		PressureThreshold: pressureThreshold,
 		TickerInterval:    15 * time.Second,
 		proc:              fs,
+		nodeName:          nodeName,
 	}, nil
 }

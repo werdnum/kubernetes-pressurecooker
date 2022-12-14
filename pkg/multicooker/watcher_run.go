@@ -60,7 +60,7 @@ func (w *Watcher) Run(closeChan chan struct{}, useAvarage bool, targetMetic int)
 
 func (w *Watcher) generateEventMessage(useAvarage bool, metrics [3]float64, targetMetric int) string {
 
-	messagetype, metricName := metricsMessageData(targetMetric, useAvarage, w.PressureThreshold, metrics)
+	messagetype, metricName := w.metricsMessageData(targetMetric, useAvarage, metrics)
 
 	var action string
 	if w.isCurrentlyHigh {
@@ -71,7 +71,7 @@ func (w *Watcher) generateEventMessage(useAvarage bool, metrics [3]float64, targ
 	return fmt.Sprintf("%s Metric %s %s=(%.2f) the threshold=(%.2f)", messagetype, metricName, action, metrics[targetMetric-1], w.PressureThreshold)
 }
 
-func metricsMessageData(targetMetric int, useAvarage bool, threshold float64, metrics [3]float64) (string, string) {
+func (w *Watcher) metricsMessageData(targetMetric int, useAvarage bool, metrics [3]float64) (string, string) {
 	var messagetype string
 	var metricName string
 	var infoMessage string
@@ -81,14 +81,14 @@ func metricsMessageData(targetMetric int, useAvarage bool, threshold float64, me
 	if useAvarage {
 		messagetype = "LoadAvg"
 		metricName = avaNames[targetMetric-1]
-		infoMessage = generateMetricsMessage(targetMetric, metrics, avaNames, threshold)
+		infoMessage = generateMetricsMessage(targetMetric, metrics, avaNames, w.PressureThreshold)
 	} else {
 		messagetype = "Pressure"
 		metricName = pressureNames[targetMetric-1]
-		infoMessage = generateMetricsMessage(targetMetric, metrics, pressureNames, threshold)
+		infoMessage = generateMetricsMessage(targetMetric, metrics, pressureNames, w.PressureThreshold)
 	}
 
-	glog.Infof("Current %s state:  %s", messagetype, infoMessage)
+	glog.Infof("NODE: %s Current %s state:  %s", w.nodeName, messagetype, infoMessage)
 
 	return messagetype, metricName
 }

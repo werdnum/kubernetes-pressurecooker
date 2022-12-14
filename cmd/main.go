@@ -76,7 +76,7 @@ func main() {
 		panic(err)
 	}
 
-	w, err := multicooker.NewWatcher(f.TaintThreshold)
+	w, err := multicooker.NewWatcher(f.TaintThreshold, f.NodeName)
 	if err != nil {
 		panic(err)
 	}
