@@ -50,9 +50,9 @@ that the older pods are less likely to be the cause of an overload.
 ## Installation
 
 There is a helm chart in the repo.
-To install from hepo folder:
+To install from repo folder:
 
-`helm upgrade --install --namespace kube-system multicooker chart/`
+`helm upgrade --install --namespace kube-system kubernetes-multicooker chart/`
 ## TODO
 
 - Create tests
