@@ -46,3 +46,14 @@ Older pods will be evicted first.
 The ration to remove old pods first is tat it is usually better to move well behaving pods away from bad neighbors
 than moving bad neighbors through the cluster. And as a node will always stay in a healthy state it can be assumed
 that the older pods are less likely to be the cause of an overload.
+
+## Installation
+
+There is a helm chart in the repo.
+To install from hepo folder:
+
+`helm upgrade --install --namespace kube-system kubernetes-multicooker chart`
+## TODO
+
+- Create tests
+- Fix prometheus metrics to be per node
