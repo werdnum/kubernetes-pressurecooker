@@ -19,26 +19,27 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 )
 
+var f config.StartupFlags
 var (
 	prometheusNamespace       = "multicooker"
 	pressureThresholdExceeded = prometheus.NewGauge(prometheus.GaugeOpts{
 		Namespace: prometheusNamespace,
-		Name:      "pressure_threshold_exceeded",
+		Name:      fmt.Sprintf("pressure_threshold_exceeded_%s", f.NodeName),
 		Help:      "cpu pressure is currently above (1) or below (0) threshold",
 	})
 	pressureThresholdExceededTotal = prometheus.NewGauge(prometheus.GaugeOpts{
 		Namespace: prometheusNamespace,
-		Name:      "pressure_threshold_exceeded_total",
+		Name:      fmt.Sprintf("pressure_threshold_exceeded_total_%s", f.NodeName),
 		Help:      "number of times the pressure threshold was exceeded",
 	})
 	pressureRecoveredTotal = prometheus.NewGauge(prometheus.GaugeOpts{
 		Namespace: prometheusNamespace,
-		Name:      "pressure_recovered_total",
+		Name:      fmt.Sprintf("pressure_recovered_total_%s", f.NodeName),
 		Help:      "number of times the pressure on the node recovered",
 	})
 	pressureEnabled = prometheus.NewGauge(prometheus.GaugeOpts{
 		Namespace: prometheusNamespace,
-		Name:      "enabled",
+		Name:      fmt.Sprintf("enabled_%s", f.NodeName),
 		Help:      "multicooker is enabled (1) or disabled (0)",
 	})
 )
@@ -48,8 +49,6 @@ func main() {
 	prometheus.MustRegister(pressureThresholdExceededTotal)
 	prometheus.MustRegister(pressureRecoveredTotal)
 	prometheus.MustRegister(pressureEnabled)
-
-	var f config.StartupFlags
 
 	flag.StringVar(&f.KubeConfig, "kubeconfig", "", "file path to kubeconfig")
 	flag.Float64Var(&f.TaintThreshold, "taint-threshold", 25, "pressure threshold value")
