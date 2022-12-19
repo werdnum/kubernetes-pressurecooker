@@ -1,0 +1,19 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: kube-prometheus-stack-multicooker-metrics
+  namespace: monitoring
+  labels: 
+  #some of those labels should match the "spec.selector.matchLatels" of prometheus otherwise metrics won't be available in targets
+    app: kube-prometheus-stack-operator
+    chart: {{ .Chart.Name }}-{{ .Chart.Version }}
+    release: kube-prometheus-stack
+    {{- range $key, $value := .Values.serviceMonitor.additionalLabels }}
+    {{ $key }}: {{ $value | quote }}
+spec:
+  selector:
+    matchLabels:
+       app: {{ include "chart.name"  . }}
+  podMetricsEndpoints:
+  - port: metrics
+  - path: "/metrics"

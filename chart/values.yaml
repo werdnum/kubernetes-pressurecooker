@@ -1,6 +1,6 @@
 image:
   repository: docmarr/kubernetes-multicooker
-  tag: "1.0.0"
+  tag: "1.0.2"
   pullPolicy: Always 
 
 nameOverride: ""
