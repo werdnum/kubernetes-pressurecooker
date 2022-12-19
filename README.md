@@ -56,4 +56,4 @@ To install from repo folder:
 ## TODO
 
 - Create tests
-- Fix prometheus metrics to be per node
+- Fix prometheus metrics to be per node- release 1.0.2
