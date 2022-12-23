@@ -1,7 +1,7 @@
 # Kubernetes Multi Cooker
 Automatically taint and evict nodes with high CPU overload based on chosen Metric PSI or Avarage Load. Derived from [kubernetes-loadwatcher](https://github.com/mittwald/kubernetes-loadwatcher).
 
-This actually started as a small extension of [kubernetes-pressurecooker](https://github.com/werdnum/kubernetes-pressurecooker) just to do the job.But there were popping more and more things that we needed. It became multicooker once we tried to move with it to GKE and we hit a wall with it. Because google have quite a bit of different kernels on their machines. Some of them has PSI others doesnt.
+This actually started as a small extension of [kubernetes-pressurecooker](https://github.com/rtreffer/kubernetes-pressurecooker) just to do the job.But there were popping more and more things that we needed. It became multicooker once we tried to move with it to GKE and we hit a wall with it. Because google have quite a bit of different kernels on their machines. Some of them has PSI others doesnt.
 
 The load average describes the average length of the run queue whenever a scheduling decision is made. But it does not tell us how often processes were waiting for CPU time.
 The [kernel pressure metrics (psi by facebook)](https://facebookmicrosites.github.io/psi/docs/overview.html#pressure-metric-definitions) describes how often there was not enough CPU available.
