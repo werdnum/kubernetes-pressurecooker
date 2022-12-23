@@ -19,37 +19,15 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 )
 
-var f config.StartupFlags
 var (
-	prometheusNamespace       = "multicooker"
-	pressureThresholdExceeded = prometheus.NewGauge(prometheus.GaugeOpts{
-		Namespace: prometheusNamespace,
-		Name:      fmt.Sprintf("pressure_threshold_exceeded_%s", f.NodeName),
-		Help:      "cpu pressure is currently above (1) or below (0) threshold",
-	})
-	pressureThresholdExceededTotal = prometheus.NewGauge(prometheus.GaugeOpts{
-		Namespace: prometheusNamespace,
-		Name:      fmt.Sprintf("pressure_threshold_exceeded_total_%s", f.NodeName),
-		Help:      "number of times the pressure threshold was exceeded",
-	})
-	pressureRecoveredTotal = prometheus.NewGauge(prometheus.GaugeOpts{
-		Namespace: prometheusNamespace,
-		Name:      fmt.Sprintf("pressure_recovered_total_%s", f.NodeName),
-		Help:      "number of times the pressure on the node recovered",
-	})
-	pressureEnabled = prometheus.NewGauge(prometheus.GaugeOpts{
-		Namespace: prometheusNamespace,
-		Name:      fmt.Sprintf("enabled_%s", f.NodeName),
-		Help:      "multicooker is enabled (1) or disabled (0)",
-	})
+	pressureThresholdExceededTotal,
+	pressureRecoveredTotal,
+	pressureThresholdExceeded,
+	pressureEnabled prometheus.Gauge
+	f config.StartupFlags
 )
 
-func main() {
-	prometheus.MustRegister(pressureThresholdExceeded)
-	prometheus.MustRegister(pressureThresholdExceededTotal)
-	prometheus.MustRegister(pressureRecoveredTotal)
-	prometheus.MustRegister(pressureEnabled)
-
+func init() {
 	flag.StringVar(&f.KubeConfig, "kubeconfig", "", "file path to kubeconfig")
 	flag.Float64Var(&f.TaintThreshold, "taint-threshold", 25, "pressure threshold value")
 	flag.Float64Var(&f.EvictThreshold, "evict-threshold", 50, "pressure threshold value")
@@ -60,6 +38,35 @@ func main() {
 	flag.IntVar(&f.TargetMetric, "target-metric", 3, "target metric to use / 10,60,300 for pressure; and 1,5,15 for avarage/")
 	flag.BoolVar(&f.UseAvarage, "use-avarage", false, "use loadavg instead of proc/pressure/cpu")
 	flag.Parse()
+
+	prometheusNamespace := "multicooker"
+	pressureThresholdExceeded = prometheus.NewGauge(prometheus.GaugeOpts{
+		Namespace: prometheusNamespace,
+		Name:      "pressure_threshold_exceeded",
+		Help:      "cpu pressure is currently above (1) or below (0) threshold",
+	})
+	pressureThresholdExceededTotal = prometheus.NewGauge(prometheus.GaugeOpts{
+		Namespace: prometheusNamespace,
+		Name:      "pressure_threshold_exceeded_total",
+		Help:      "number of times the pressure threshold was exceeded",
+	})
+	pressureRecoveredTotal = prometheus.NewGauge(prometheus.GaugeOpts{
+		Namespace: prometheusNamespace,
+		Name:      "pressure_recovered_total",
+		Help:      "number of times the pressure on the node recovered",
+	})
+	pressureEnabled = prometheus.NewGauge(prometheus.GaugeOpts{
+		Namespace: prometheusNamespace,
+		Name:      "enabled",
+		Help:      "multicooker is enabled (1) or disabled (0)",
+	})
+}
+
+func main() {
+	prometheus.MustRegister(pressureThresholdExceeded)
+	prometheus.MustRegister(pressureThresholdExceededTotal)
+	prometheus.MustRegister(pressureRecoveredTotal)
+	prometheus.MustRegister(pressureEnabled)
 
 	if f.NodeName == "" {
 		panic("-node-name not set")

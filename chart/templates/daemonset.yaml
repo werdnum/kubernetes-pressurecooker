@@ -31,9 +31,6 @@ spec:
           - containerPort: 8080
             protocol: TCP
             name: metrics
-          - containerPort: 80
-            protocol: TCP
-            name: web
           env:
             - name: NODE_NAME
               valueFrom:
