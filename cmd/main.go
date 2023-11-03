@@ -12,6 +12,7 @@ import (
 	"github.com/golang/glog"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"github.com/prometheus/procfs"
 	"github.com/rtreffer/kubernetes-pressurecooker/pkg/config"
 	"github.com/rtreffer/kubernetes-pressurecooker/pkg/pressurecooker"
 	"k8s.io/client-go/kubernetes"
@@ -36,6 +37,11 @@ var (
 		Name:      "pressure_recovered_total",
 		Help:      "number of times the pressure on the node recovered",
 	})
+	pressureMode = prometheus.NewGaugeVec(prometheus.GaugeOpts{
+		Namespace: prometheusNamespace,
+		Name:      "mode",
+		Help:      "pressurecooker mode",
+	}, []string{"mode"})
 	pressureEnabled = prometheus.NewGauge(prometheus.GaugeOpts{
 		Namespace: prometheusNamespace,
 		Name:      "enabled",
@@ -52,8 +58,10 @@ func main() {
 	var f config.StartupFlags
 
 	flag.StringVar(&f.KubeConfig, "kubeconfig", "", "file path to kubeconfig")
-	flag.Float64Var(&f.TaintThreshold, "taint-threshold", 25, "pressure threshold value")
-	flag.Float64Var(&f.EvictThreshold, "evict-threshold", 50, "pressure threshold value")
+	flag.Float64Var(&f.PressureTaintThreshold, "taint-threshold", 25, "pressure threshold value to taint the node")
+	flag.Float64Var(&f.PressureEvictThreshold, "evict-threshold", 50, "pressure threshold value to evict pods")
+	flag.Float64Var(&f.LoadTaintThreshold, "load-taint-threshold", 25, "load average threshold value to taint the node - used if pressure is not available")
+	flag.Float64Var(&f.LoadEvictThreshold, "load-evict-threshold", 50, "load average threshold value to evict pods - used if pressure is not available")
 	flag.StringVar(&f.EvictBackoff, "evict-backoff", "10m", "time to wait between evicting Pods")
 	flag.StringVar(&f.MinPodAge, "min-pod-age", "5m", "minimum age of Pods to be evicted")
 	flag.StringVar(&f.NodeName, "node-name", "", "current node name")
@@ -74,7 +82,28 @@ func main() {
 		panic(err)
 	}
 
-	w, err := pressurecooker.NewWatcher(f.TaintThreshold)
+	fs, err := procfs.NewDefaultFS()
+
+	if err != nil {
+		panic(err)
+	}
+
+	var lg pressurecooker.LoadGetter
+	var taintThreshold float64
+	var evictThreshold float64
+	if _, err := fs.PSIStatsForResource("cpu"); err == nil {
+		lg = &pressurecooker.PressureLoadGetter{ProcFS: fs}
+		taintThreshold = f.PressureTaintThreshold
+		evictThreshold = f.PressureEvictThreshold
+		pressureMode.WithLabelValues("psi").Set(1)
+	} else {
+		lg = &pressurecooker.LoadAvgLoadGetter{ProcFS: fs}
+		taintThreshold = f.LoadTaintThreshold
+		evictThreshold = f.LoadEvictThreshold
+		pressureMode.WithLabelValues("loadavg").Set(1)
+	}
+
+	w, err := pressurecooker.NewWatcher(taintThreshold, lg)
 	if err != nil {
 		panic(err)
 	}
@@ -84,7 +113,7 @@ func main() {
 		panic(err)
 	}
 
-	e, err := pressurecooker.NewEvicter(c, f.EvictThreshold, f.NodeName, f.EvictBackoff, f.MinPodAge)
+	e, err := pressurecooker.NewEvicter(c, evictThreshold, f.NodeName, f.EvictBackoff, f.MinPodAge)
 	if err != nil {
 		panic(err)
 	}
@@ -143,7 +172,7 @@ func main() {
 				return
 			}
 
-			if time.Now().Sub(lastDisabledCheck) > 1*time.Minute {
+			if time.Since(lastDisabledCheck) > 1*time.Minute {
 				if disabled, err := t.IsPressurecookerDisabled(); err == nil {
 					isDisabled = disabled
 					if isDisabled {
@@ -157,7 +186,7 @@ func main() {
 				lastDisabledCheck = time.Now()
 			}
 			if isDisabled && isTainted {
-				if err := t.UntaintNode(pressurecooker.PressureThresholdEvent{}); err != nil {
+				if err := t.UntaintNode(pressurecooker.ThresholdEvent{}); err != nil {
 					glog.Errorf("error while untainting node: %s", err.Error())
 				} else {
 					isTainted = false
@@ -165,7 +194,7 @@ func main() {
 			}
 
 			if isDisabled {
-				glog.Infof("pressurecooker disabled, pressure: %v", evt)
+				glog.Infof("pressurecooker disabled, pressure: %v", evt.String())
 				continue
 			}
 
@@ -176,7 +205,7 @@ func main() {
 				continue
 			}
 
-			glog.Infof("5 minute pressure average exceeded threshold, avg300=%f", evt.Avg300)
+			glog.Infof("5 minute pressure average exceeded threshold, %v", evt.Load)
 
 			if err := t.TaintNode(evt); err != nil {
 				glog.Errorf("error while tainting node: %s", err.Error())
@@ -195,7 +224,7 @@ func main() {
 				continue
 			}
 
-			glog.Infof("pressure deceeded threshold, avg300=%f avg60=%f avg10=%f", evt.Avg300, evt.Avg60, evt.Avg10)
+			glog.Infof("pressure deceeded threshold, %s", evt.String())
 			if err := t.UntaintNode(evt); err != nil {
 				glog.Errorf("error while removing taint from node: %s", err.Error())
 			} else {

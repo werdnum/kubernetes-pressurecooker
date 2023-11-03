@@ -1,11 +1,13 @@
 package config
 
 type StartupFlags struct {
-	KubeConfig     string
-	TaintThreshold float64
-	EvictThreshold float64
-	EvictBackoff   string
-	MinPodAge      string
-	NodeName       string
-	MetricsPort    int
+	KubeConfig             string
+	PressureTaintThreshold float64
+	PressureEvictThreshold float64
+	LoadTaintThreshold     float64
+	LoadEvictThreshold     float64
+	EvictBackoff           string
+	MinPodAge              string
+	NodeName               string
+	MetricsPort            int
 }

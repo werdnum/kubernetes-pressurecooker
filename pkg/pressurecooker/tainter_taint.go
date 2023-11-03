@@ -43,7 +43,7 @@ func (t *Tainter) IsPressurecookerDisabled() (bool, error) {
 	return false, nil
 }
 
-func (t *Tainter) TaintNode(evt PressureThresholdEvent) error {
+func (t *Tainter) TaintNode(evt ThresholdEvent) error {
 	node, err := t.client.CoreV1().Nodes().Get(t.nodeName, metav1.GetOptions{})
 	if err != nil {
 		return err
@@ -70,7 +70,7 @@ func (t *Tainter) TaintNode(evt PressureThresholdEvent) error {
 
 	_, err = t.client.CoreV1().Nodes().Update(nodeCopy)
 
-	t.recorder.Eventf(t.nodeRef, v1.EventTypeWarning, "CPUPressureExceeded", "pressure over 5 minutes on node was %.2f, tainting node", evt.Avg300)
+	t.recorder.Eventf(t.nodeRef, v1.EventTypeWarning, "CPUPressureExceeded", "%s, tainting node", evt.String())
 
 	if err != nil {
 		t.recorder.Eventf(t.nodeRef, v1.EventTypeWarning, "NodePatchError", "could not patch node: %s", err.Error())
@@ -80,7 +80,7 @@ func (t *Tainter) TaintNode(evt PressureThresholdEvent) error {
 	return nil
 }
 
-func (t *Tainter) UntaintNode(evt PressureThresholdEvent) error {
+func (t *Tainter) UntaintNode(evt ThresholdEvent) error {
 	node, err := t.client.CoreV1().Nodes().Get(t.nodeName, metav1.GetOptions{})
 	if err != nil {
 		return err
@@ -100,7 +100,7 @@ func (t *Tainter) UntaintNode(evt PressureThresholdEvent) error {
 		return nil
 	}
 
-	t.recorder.Eventf(t.nodeRef, v1.EventTypeNormal, "LoadThresholdDeceeded", "pressure on node was %.2f over 5 minutes. untainting node", evt.Avg300)
+	t.recorder.Eventf(t.nodeRef, v1.EventTypeNormal, "LoadThresholdDeceeded", "%s. untainting node", evt.String())
 
 	_, err = t.client.CoreV1().Nodes().Patch(t.nodeName, types.JSONPatchType, jsonpatch.PatchList{{
 		Op:    "test",
