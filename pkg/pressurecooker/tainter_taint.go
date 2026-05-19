@@ -1,6 +1,7 @@
 package pressurecooker
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/golang/glog"
@@ -11,7 +12,7 @@ import (
 )
 
 func (t *Tainter) IsNodeTainted() (bool, error) {
-	node, err := t.client.CoreV1().Nodes().Get(t.nodeName, metav1.GetOptions{})
+	node, err := t.client.CoreV1().Nodes().Get(context.Background(), t.nodeName, metav1.GetOptions{})
 	if err != nil {
 		return false, err
 	}
@@ -26,7 +27,7 @@ func (t *Tainter) IsNodeTainted() (bool, error) {
 }
 
 func (t *Tainter) IsPressurecookerDisabled() (bool, error) {
-	node, err := t.client.CoreV1().Nodes().Get(t.nodeName, metav1.GetOptions{})
+	node, err := t.client.CoreV1().Nodes().Get(context.Background(), t.nodeName, metav1.GetOptions{})
 	if err != nil {
 		return false, err
 	}
@@ -44,7 +45,7 @@ func (t *Tainter) IsPressurecookerDisabled() (bool, error) {
 }
 
 func (t *Tainter) TaintNode(evt ThresholdEvent) error {
-	node, err := t.client.CoreV1().Nodes().Get(t.nodeName, metav1.GetOptions{})
+	node, err := t.client.CoreV1().Nodes().Get(context.Background(), t.nodeName, metav1.GetOptions{})
 	if err != nil {
 		return err
 	}
@@ -68,7 +69,7 @@ func (t *Tainter) TaintNode(evt ThresholdEvent) error {
 		Effect: v1.TaintEffectPreferNoSchedule,
 	})
 
-	_, err = t.client.CoreV1().Nodes().Update(nodeCopy)
+	_, err = t.client.CoreV1().Nodes().Update(context.Background(), nodeCopy, metav1.UpdateOptions{})
 
 	t.recorder.Eventf(t.nodeRef, v1.EventTypeWarning, "CPUPressureExceeded", "%s, tainting node", evt.String())
 
@@ -81,7 +82,7 @@ func (t *Tainter) TaintNode(evt ThresholdEvent) error {
 }
 
 func (t *Tainter) UntaintNode(evt ThresholdEvent) error {
-	node, err := t.client.CoreV1().Nodes().Get(t.nodeName, metav1.GetOptions{})
+	node, err := t.client.CoreV1().Nodes().Get(context.Background(), t.nodeName, metav1.GetOptions{})
 	if err != nil {
 		return err
 	}
@@ -102,7 +103,7 @@ func (t *Tainter) UntaintNode(evt ThresholdEvent) error {
 
 	t.recorder.Eventf(t.nodeRef, v1.EventTypeNormal, "LoadThresholdDeceeded", "%s. untainting node", evt.String())
 
-	_, err = t.client.CoreV1().Nodes().Patch(t.nodeName, types.JSONPatchType, jsonpatch.PatchList{{
+	_, err = t.client.CoreV1().Nodes().Patch(context.Background(), t.nodeName, types.JSONPatchType, jsonpatch.PatchList{{
 		Op:    "test",
 		Path:  fmt.Sprintf("/spec/taints/%d/key", taintIndex),
 		Value: TaintKey,
@@ -110,7 +111,7 @@ func (t *Tainter) UntaintNode(evt ThresholdEvent) error {
 		Op:    "remove",
 		Path:  fmt.Sprintf("/spec/taints/%d", taintIndex),
 		Value: "",
-	}}.ToJSON())
+	}}.ToJSON(), metav1.PatchOptions{})
 
 	if err != nil {
 		t.recorder.Eventf(t.nodeRef, v1.EventTypeWarning, "NodePatchError", "could not patch node: %s", err.Error())
