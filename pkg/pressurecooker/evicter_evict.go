@@ -1,6 +1,7 @@
 package pressurecooker
 
 import (
+	"context"
 	"time"
 
 	"github.com/golang/glog"
@@ -46,7 +47,7 @@ func (e *Evicter) EvictPod(evt ThresholdEvent) (bool, error) {
 
 	fieldSelector := fields.OneTermEqualSelector("spec.nodeName", e.nodeName)
 
-	podsOnNode, err := e.client.CoreV1().Pods("").List(metav1.ListOptions{
+	podsOnNode, err := e.client.CoreV1().Pods("").List(context.Background(), metav1.ListOptions{
 		FieldSelector: fieldSelector.String(),
 	})
 
@@ -78,6 +79,6 @@ func (e *Evicter) EvictPod(evt ThresholdEvent) (bool, error) {
 	e.recorder.Eventf(podToEvict, v1.EventTypeWarning, "EvictHighLoad", "evicting pod due to high cpu pressure on node: %s", evt.String())
 	e.recorder.Eventf(e.nodeRef, v1.EventTypeWarning, "EvictHighLoad", "evicting pod due to high cpu pressure on node: %s", evt.String())
 
-	err = e.client.CoreV1().Pods(podToEvict.Namespace).Evict(&eviction)
+	err = e.client.CoreV1().Pods(podToEvict.Namespace).Evict(context.Background(), &eviction)
 	return true, err
 }
